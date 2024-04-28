@@ -1,0 +1,45 @@
+./minimap2 -ax map-pb ../ref_genome_1.txt ../ref_genome_1.txt >../ref1_output.sam  
+
+samtools view -Sb 3_output.sam > 3_output.bam
+samtools sort 3_output.bam -o 3_output_sorted.bam
+samtools index 3_output_sorted.bam
+samtools faidx ref_genome_1.txt
+samtools mpileup -uf ref_genome_1.txt ref1_output_sorted.bam ref2_output_sorted.bam 0_output_sorted.bam 1_output_sorted.bam 2_output_sorted.bam 3_output_sorted.bam > pile_up
+
+/public3/group_crf/software/gatk-4.2.1.0/gatk AddOrReplaceReadGroups \
+     -I ref1_output_sorted.bam \
+     -O ref1_output_sorted_rg.bam \
+     -RGID ref1 \
+     -RGLB lib1 \
+     -RGPL illumina \
+     -RGPU unit1 \
+     -RGSM 0
+samtools index ref1_output_sorted_rg.bam
+
+
+/public3/group_crf/software/gatk-4.2.1.0/gatk HaplotypeCaller \
+   -R ref_genome_1.txt \
+   -I ref1_output_sorted_rg.bam \
+   -O ref1_output.vcf
+/public3/group_crf/software/gatk-4.2.1.0/gatk CombineGVCFs \
+   -R ref_genome_1.txt \
+   --variant ref1_output.vcf \
+   --variant ref2_output.vcf \
+   --variant 0_output.vcf \
+   --variant 1_output.vcf \
+   --variant 2_output.vcf \
+   --variant 3_output.vcf \
+   -O combined_output.vcf
+samtools flagstat 3_output_sorted.bam
+
+/public3/group_crf/software/gatk-4.2.1.0/gatk HaplotypeCaller \
+   -R ref_genome_1.txt \
+   -I ref2_output_sorted_rg.bam \
+   -O ref2_output.vcf \
+   --min-base-quality-score 10 \
+   -stand-call-conf 10 \
+   --native-pair-hmm-threads 1
+
+conda activate scipy
+java -version
+conda deactivate
